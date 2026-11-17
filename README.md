@@ -29,13 +29,22 @@ Your private settings, including your alarm channel name (the "ntfy topic"), are
 
 ### 1. Phone: the alarm app
 
-1. Install **ntfy** (free): Google Play or the App Store.
-2. Tap **+** → enter your topic from `my-settings.local.txt` → Subscribe.
-3. Make it loud:
-   - Android: allow ntfy notifications, let it **override Do Not Disturb**, and if your version
-     has the setting to keep alerting for max-priority messages, turn it on.
-   - iPhone: allow notifications and **Time Sensitive** notifications for ntfy. iOS can't make
-     a third-party app ring through silent mode, so the email/ntfy banner is what you'll get.
+**Android** (rings like an alarm clock, even on silent/vibrate):
+
+1. Install **ntfy** (free, by Philipp C. Heckel) from Google Play. Open it and allow notifications.
+   If it shows *"Battery optimization should be off…"*, tap **Fix now** and allow it.
+2. Subscribe to your channel. Either scan the QR code in `phone-setup-qr.png` (made locally,
+   never uploaded), or tap **+** ("Subscribe to topic"), paste the topic from
+   `my-settings.local.txt`, turn on **Instant delivery in doze mode**, and tap **Subscribe**.
+3. In ntfy: **⋮ → Settings → "Keep alerting for highest priority" → ON**. Alarm messages then
+   loop their sound on Android's **alarm** channel until you swipe the notification away.
+4. Keep the phone's **alarm volume** above zero (the ring uses alarm volume, not ringer volume).
+5. Optional: **⋮ → Settings → Channel settings → Max priority** to pick a louder sound and to
+   check that *Override Do Not Disturb* is allowed.
+
+**iPhone:** install ntfy from the App Store, tap **+** and subscribe to your topic, and allow
+**Time Sensitive** notifications. iOS won't let ntfy ring through silent mode. For that you'd
+need an app with Critical Alerts, such as Pushover.
 
 ### 2. Gmail: an app password for sending the email
 

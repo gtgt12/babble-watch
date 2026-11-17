@@ -2,3 +2,5 @@
 my-settings.local.txt
 __pycache__/
 *.pyc
+# Phone setup QR code (contains your private topic)
+phone-setup-qr.png
