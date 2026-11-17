@@ -1,0 +1,4 @@
+# Your private settings (ntfy topic etc.) - never upload this
+my-settings.local.txt
+__pycache__/
+*.pyc
