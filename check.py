@@ -245,8 +245,8 @@ def send_ntfy(cfg, alert):
     if alert.url:
         payload["click"] = alert.url
         payload["actions"] = [{"action": "view", "label": "Open store page", "url": alert.url}]
-    # ntfy also emails the alert (no Gmail password needed), unless Gmail sending is set up.
-    if cfg["email_to"] and not cfg["gmail_password"]:
+    # ntfy.sh only emails for signed-in accounts, so this needs NTFY_TOKEN.
+    if cfg["email_to"] and cfg["ntfy_token"] and not cfg["gmail_password"]:
         payload["email"] = cfg["email_to"]
     req = urllib.request.Request(
         cfg["ntfy_server"] + "/",
@@ -288,7 +288,7 @@ def deliver(cfg, alert, dry_run=False):
         return True
     channels = []
     if cfg["ntfy_topic"]:
-        via_email = " + email" if (cfg["email_to"] and not cfg["gmail_password"]) else ""
+        via_email = " + email" if (cfg["email_to"] and cfg["ntfy_token"] and not cfg["gmail_password"]) else ""
         channels.append((f"ntfy (phone + PC alarm{via_email})", send_ntfy))
     if cfg["gmail"] and cfg["gmail_password"]:
         channels.append(("Gmail", send_email))

@@ -48,14 +48,14 @@ need an app with Critical Alerts, such as Pushover.
 
 ### 2. Email
 
-**Easy way (no password):** save your address as the `ALERT_EMAIL_TO` secret and ntfy emails
-every alert to you (from `ntfy@ntfy.sh`, so check Spam the first time):
+Email goes to the `ALERT_EMAIL_TO` secret (or `GMAIL_ADDRESS`). It needs one of these:
 
-```bash
-gh secret set ALERT_EMAIL_TO --repo gtgt12/babble-watch
-```
+- **Gmail app password** (below): the email comes from your own Gmail.
+- **A free ntfy.sh account:** sign up at ntfy.sh, create an access token, and save it as the
+  `NTFY_TOKEN` secret. ntfy then emails each alert from `ntfy@ntfy.sh` (check Spam the first
+  time). ntfy.sh doesn't send emails without an account.
 
-**Optional, send from your own Gmail instead:** the watcher can send the email from your Gmail to your Gmail. Google requires an **app password**
+**Gmail app password:** the watcher sends the email from your Gmail to your Gmail. Google requires an **app password**
 for this. It's not your normal password, and you can delete it anytime.
 
 1. Turn on **2-Step Verification** for your Google account (required for app passwords).
