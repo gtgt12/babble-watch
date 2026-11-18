@@ -98,6 +98,16 @@
         "Orders opening soon",
         "No calibration, two cameras, on-device tracking. Designed around Steam Frame.",
         "View Details"
+      ],
+      "products": [
+        [
+          "babble-mouth-tracker-preorder",
+          "Babble Mouth Tracker"
+        ],
+        [
+          "babble-x-mmi-modular-usb-hub",
+          "USB 2.0 Hub"
+        ]
       ]
     }
   },
