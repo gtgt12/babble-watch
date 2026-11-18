@@ -58,13 +58,29 @@ PAGES = [
         "url": PRO_URL,
         # If these are missing, the page didn't load properly (or moved): don't trust it.
         "must_contain": ["Mouth Tracker Pro"],
-        # Any of these showing up = ALARM.
-        "alarm_if_found": [BUY_WORDS],
-        # Any of these disappearing = ALARM. (Today the buy button says
+        # Visible text that showing up = ALARM.
+        "alarm_if_found": [
+            BUY_WORDS,
+            r"\$\s?\d+(?:[.,]\d\d)?",                         # a price, e.g. "$179"
+            r"\b\d+(?:\.\d\d)?\s?USD\b",                      # "179 USD"
+            r"checkout is handled|fulfil?ment partner",       # PiShock checkout box (on buyable pages)
+            r"select (?:your )?headset|choose your headset",  # headset picker (on buyable pages)
+            r"\bin the box\b",                                # box contents list (on buyable pages)
+            r"\badd to (?:cart|bag|basket)\b",
+        ],
+        # Visible text that disappearing = ALARM. (Today the buy button says
         # "Orders opening soon · Est. December 2026" and is greyed out.)
-        "alarm_if_missing": ["Orders opening soon"],
+        "alarm_if_missing": ["Orders opening soon", "Price TBA", "Coming Soon"],
+        # Raw page code (incl. hidden data and page description) showing up = ALARM.
+        "raw_alarm_if_found": [
+            r'availableForSale\\?"\s*:\s*true',               # a store product record that's for sale
+            r"pishock\.com|discord\.gg/pishock",              # checkout partner's links
+            r"cartCreate|checkoutUrl",
+        ],
+        "raw_alarm_if_missing": [r'name="description" content="[^"]*Orders opening soon'],
         # A clickable (not greyed-out) buy/order button = ALARM.
         "watch_buttons": True,
+        "watch_products": False,
     },
     {
         "id": "shop",
@@ -72,11 +88,16 @@ PAGES = [
         "url": SHOP_URL,
         "must_contain": ["Mouth Tracker Pro"],
         "alarm_if_found": [],
-        # The Pro's card in the shop also says "Orders opening soon" today.
-        "alarm_if_missing": ["Orders opening soon"],
+        # The Pro's card in the shop says "Coming Soon", "Est. Dec 2026", "Orders opening soon".
+        "alarm_if_missing": ["Orders opening soon", "Coming Soon", "Est. Dec"],
+        "raw_alarm_if_found": [],
+        "raw_alarm_if_missing": [],
         "watch_buttons": False,
+        # New store product records: name with Pro/Frame = ALARM, anything else = heads-up.
+        "watch_products": True,
     },
 ]
+PRODUCT_ALARM_WORDS = r"\bpro\b|frame"
 
 ALARM_REMINDERS = 2          # after the first alarm, ring again on the next N checks
 FAIL_ALERT_AFTER = 6         # tell you if the shop can't be read this many checks in a row (~3 h)
@@ -186,6 +207,13 @@ def evaluate(page, html):
     for phrase in page.get("alarm_if_missing", []):
         if phrase.lower() not in low:
             reasons.append(f'"{phrase}" is no longer on the page')
+    for pattern in page.get("raw_alarm_if_found", []):
+        match = re.search(pattern, html, re.IGNORECASE)
+        if match:
+            reasons.append(f'the page code now contains "{match.group(0)}"')
+    for pattern in page.get("raw_alarm_if_missing", []):
+        if not re.search(pattern, html, re.IGNORECASE):
+            reasons.append(f"the page code no longer matches {pattern!r}")
     buttons = [b for b in parser.buttons if b["in_main"] or not parser.saw_main]
     if page.get("watch_buttons"):
         for b in buttons:
@@ -195,7 +223,19 @@ def evaluate(page, html):
     # Unique, in order.
     reasons = list(dict.fromkeys(reasons))
     status_buttons = [f'{b["text"]} ({"greyed out" if b["disabled"] else "CLICKABLE"})' for b in buttons if b["text"]]
-    return {"ok": True, "lines": lines, "released": bool(reasons), "reasons": reasons, "buttons": status_buttons}
+    products = extract_products(html) if page.get("watch_products") else []
+    return {"ok": True, "lines": lines, "released": bool(reasons), "reasons": reasons,
+            "buttons": status_buttons, "products": products}
+
+
+def extract_products(html):
+    """Store product records embedded in the page: [[handle, title], ...]."""
+    raw = html.replace('\\"', '"')
+    found = {}
+    for m in re.finditer(r'"handle"\s*:\s*"([^"]+)"', raw):
+        title = re.search(r'"title"\s*:\s*"([^"]+)"', raw[m.end():m.end() + 400])
+        found.setdefault(m.group(1), title.group(1) if title else m.group(1))
+    return sorted([h, t] for h, t in found.items())
 
 
 def describe_diff(old_lines, new_lines, limit=30):
@@ -375,7 +415,19 @@ def run_check(args, cfg):
             changes = describe_diff(old["lines"], result["lines"])
             if changes:
                 notices.append(f"{page['name']} changed:\n" + "\n".join(changes))
-        new_pages[page["id"]] = {"released": result["released"], "lines": result["lines"]}
+        if page.get("watch_products") and "products" in old:
+            known = {h for h, _ in old["products"]}
+            for handle, title in result["products"]:
+                if handle in known:
+                    continue
+                if re.search(PRODUCT_ALARM_WORDS, f"{handle} {title}", re.IGNORECASE):
+                    alarm_reasons.append(f'{page["name"]}: new store product "{title}" ({handle})')
+                else:
+                    notices.append(f'{page["name"]}: new store product "{title}" ({handle})')
+        entry = {"released": result["released"], "lines": result["lines"]}
+        if page.get("watch_products"):
+            entry["products"] = result["products"]
+        new_pages[page["id"]] = entry
 
     first_run = not old_pages
     alerts = []
