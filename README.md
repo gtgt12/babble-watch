@@ -46,9 +46,16 @@ Your private settings, including your alarm channel name (the "ntfy topic"), are
 **Time Sensitive** notifications. iOS won't let ntfy ring through silent mode. For that you'd
 need an app with Critical Alerts, such as Pushover.
 
-### 2. Gmail: an app password for sending the email
+### 2. Email
 
-The watcher sends the email from your Gmail to your Gmail. Google requires an **app password**
+**Easy way (no password):** save your address as the `ALERT_EMAIL_TO` secret and ntfy emails
+every alert to you (from `ntfy@ntfy.sh`, so check Spam the first time):
+
+```bash
+gh secret set ALERT_EMAIL_TO --repo gtgt12/babble-watch
+```
+
+**Optional, send from your own Gmail instead:** the watcher can send the email from your Gmail to your Gmail. Google requires an **app password**
 for this. It's not your normal password, and you can delete it anytime.
 
 1. Turn on **2-Step Verification** for your Google account (required for app passwords).
