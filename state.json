@@ -111,6 +111,34 @@
       ]
     }
   },
+  "feeds": {
+    "blog": [
+      "https://docs.babble.diy/blog/face-tracking",
+      "https://docs.babble.diy/blog/eballs",
+      "https://docs.babble.diy/blog/mit-reality-hack-2026",
+      "https://docs.babble.diy/blog/open-sauce-2025",
+      "https://docs.babble.diy/blog/vrcft-avalonia",
+      "https://docs.babble.diy/blog/reverse-engineering-the-vive-facial-tracker"
+    ],
+    "youtube": [
+      "yt:video:fB1gxXLaYkU",
+      "yt:video:DOfo9Oa_8w4",
+      "yt:video:FAGvpBFi5hU",
+      "yt:video:CmLql1VxT-I",
+      "yt:video:wmNbd57EO9s",
+      "yt:video:X59eeizUFfM",
+      "yt:video:iPRabTew0KU"
+    ],
+    "github": [
+      "tag:github.com,2008:Repository/511691083/v2.0.7",
+      "tag:github.com,2008:Repository/511691083/v2.0.5",
+      "tag:github.com,2008:Repository/511691083/v2.0.4",
+      "tag:github.com,2008:Repository/511691083/v2.0.3",
+      "tag:github.com,2008:Repository/511691083/v1.0.2",
+      "tag:github.com,2008:Repository/511691083/1.0.1",
+      "tag:github.com,2008:Repository/511691083/v1.0.0"
+    ]
+  },
   "reminders_left": 0,
   "fail_streak": 0,
   "fail_notified": false,
