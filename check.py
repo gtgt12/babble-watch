@@ -99,6 +99,18 @@ PAGES = [
 ]
 PRODUCT_ALARM_WORDS = r"\bpro\b|frame"
 
+# Babble's announcement feeds. A new post = heads-up; a new post about the Pro/Frame that
+# talks about ordering/launch = ALARM.
+FEEDS = [
+    {"id": "blog", "name": "Babble blog", "url": "https://docs.babble.diy/blog/rss.xml"},
+    {"id": "youtube", "name": "Babble YouTube",
+     "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCv2iNebcgy9gCKPTRxejQew"},
+    {"id": "github", "name": "Babble GitHub releases",
+     "url": "https://github.com/Project-Babble/ProjectBabble/releases.atom"},
+]
+FEED_TOPIC_WORDS = r"\bpro\b|steam ?frame"
+FEED_ALARM_WORDS = r"\border|pre-?order|on sale|available|in stock|launch|out now|released?\b|shop"
+
 ALARM_REMINDERS = 2          # after the first alarm, ring again on the next N checks
 FAIL_ALERT_AFTER = 6         # tell you if the shop can't be read this many checks in a row (~3 h)
 HEARTBEAT_DAYS = 20          # touch state.json this often so GitHub keeps the schedule alive
@@ -236,6 +248,66 @@ def extract_products(html):
         title = re.search(r'"title"\s*:\s*"([^"]+)"', raw[m.end():m.end() + 400])
         found.setdefault(m.group(1), title.group(1) if title else m.group(1))
     return sorted([h, t] for h, t in found.items())
+
+
+def read_feed(xml_text):
+    """RSS or Atom -> [{"id","title","link","text"}] (newest first as published)."""
+    import xml.etree.ElementTree as ET
+    root = ET.fromstring(xml_text)
+    items = []
+    for el in root.iter():
+        tag = el.tag.split("}")[-1]
+        if tag not in ("item", "entry"):
+            continue
+        fields = {}
+        for child in el.iter():
+            name = child.tag.split("}")[-1]
+            if name == "link" and child.get("href"):
+                fields.setdefault("link", child.get("href"))
+            elif child.text and child.text.strip():
+                fields.setdefault(name, child.text.strip())
+        ident = fields.get("guid") or fields.get("id") or fields.get("link") or fields.get("title")
+        if not ident:
+            continue
+        text = " ".join(fields.get(k, "") for k in ("title", "description", "summary", "content"))
+        text = re.sub(r"<[^>]+>", " ", text)
+        items.append({"id": ident, "title": fields.get("title", "(no title)"),
+                      "link": fields.get("link", ""), "text": text})
+    return items
+
+
+def check_feeds(state_feeds, html_dir=None):
+    """Returns (new_state_feeds, alarm_reasons, notices, problems)."""
+    new_state, alarms, notices, problems = dict(state_feeds), [], [], []
+    for feed in FEEDS:
+        try:
+            if html_dir:
+                path = os.path.join(html_dir, feed["id"] + ".xml")
+                if not os.path.exists(path):
+                    continue
+                with open(path, encoding="utf-8") as f:
+                    xml_text = f.read()
+            else:
+                xml_text = fetch(feed["url"])
+            items = read_feed(xml_text)
+        except Exception as exc:
+            problems.append(f"{feed['name']}: {exc}")
+            print(f"[{feed['id']}] PROBLEM: {exc}")
+            continue
+        seen = state_feeds.get(feed["id"])
+        ids = [i["id"] for i in items]
+        print(f"[{feed['id']}] {len(items)} posts" + (f", newest: {items[0]['title']}" if items else ""))
+        if seen is not None:
+            for item in items:
+                if item["id"] in seen:
+                    continue
+                line = f'{feed["name"]}: new post "{item["title"]}" {item["link"]}'
+                about_pro = re.search(FEED_TOPIC_WORDS, item["text"], re.IGNORECASE)
+                buying = re.search(FEED_ALARM_WORDS, item["text"], re.IGNORECASE)
+                (alarms if (about_pro and buying) else notices).append(line)
+            ids = list(dict.fromkeys(ids + seen))[:200]
+        new_state[feed["id"]] = ids
+    return new_state, alarms, notices, problems
 
 
 def describe_diff(old_lines, new_lines, limit=30):
@@ -429,6 +501,12 @@ def run_check(args, cfg):
             entry["products"] = result["products"]
         new_pages[page["id"]] = entry
 
+    feeds_state, feed_alarms, feed_notices, feed_problems = check_feeds(state.get("feeds", {}), args.html_dir)
+    alarm_reasons += feed_alarms
+    notices += feed_notices
+    if feed_problems and len(feed_problems) == len(FEEDS):
+        problems += feed_problems
+
     first_run = not old_pages
     alerts = []
     reminders_left = state.get("reminders_left", 0)
@@ -492,6 +570,7 @@ def run_check(args, cfg):
         stale = True
     new_state = {
         "pages": new_pages,
+        "feeds": feeds_state,
         "reminders_left": reminders_left,
         "fail_streak": fail_streak,
         "fail_notified": fail_notified,
